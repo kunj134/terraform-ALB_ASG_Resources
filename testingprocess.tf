@@ -9,13 +9,13 @@
 
 provider "aws" {
     region = "us-east-2"
-    access_key = "#######"
-    secret_key = "#######"
+    access_key = "########################"
+    secret_key = "########################"
 }
 
 
 ##################################################################################################################
-# 2. Creating SG for Wordpress Instance
+# 3. Creating SG for Wordpress Instance
 ##################################################################################################################
 
 # Creating a Security Group for WordPress
@@ -78,7 +78,7 @@ resource "aws_security_group" "WS-SG" {
 
 
 ##################################################################################################################
-# 3. Create public facing EC2 within existing VPC attching above SG.
+# 2. Create public facing EC2 within existing VPC
 ##################################################################################################################
 
 resource "aws_instance" "k-webserver" {
@@ -104,8 +104,61 @@ resource "aws_instance" "k-webserver" {
   # vpc_security_group_ids = [aws_security_group.WS-SG.id]
 
   tags = {
-   Name = "Webserver_From_Terraform"
+   Name = "kunjanweb_From_Terraform"
   }
 
 
+}
+
+############################################################################################################
+# Application Load Balancer
+############################################################################################################
+
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 6.0"
+
+  name = "alb-terraform-kunjan"
+
+  load_balancer_type = "application"
+
+  vpc_id             = "vpc-036d31bd5fc70a5ef" # Entered alredy created vpc 'VPC-SquareOps-Ohio'
+  subnets            = ["subnet-09a50a0db3bdf9d87", "subnet-0c7ecd015c8189600"] # Public Subnets IDS for VPC
+  security_groups    = ["sg-0ddeb3fa52ec1ac31"] # Added Created SG Id with allowed ports "22,80,443"
+
+  target_groups = [
+    {
+      name_prefix      = "Tkunj" # treat as prefix of load-balancer-name
+      backend_protocol = "HTTP" # Backend Protocol
+      backend_port     = 80 # Backend port
+      target_type      = "instance" # This Load-balancer will target instance
+      targets = {
+        my_target = {
+          target_id =  aws_instance.k-webserver.id # Load Balancer will forward request to this EC2 machine
+          port = 80 # Load Balancer will forward request to this port
+        }
+      }
+    }
+  ]
+
+  https_listeners = [
+    {
+      port               = 443 # adding listner port
+      protocol           = "HTTPS" # adding listner protocol
+      certificate_arn    = "arn:aws:acm:us-east-2:421320058418:certificate/df35a587-5429-4738-9477-5032add3142d" # adding approved ACM certificate ARN num.
+      target_group_index = 0 # It's not clear
+    }
+  ]
+
+  http_tcp_listeners = [
+    {
+      port               = 80 # adding listner port
+      protocol           = "HTTP" # adding listner protocol
+      target_group_index = 0 # It's not clear
+    }
+  ]
+
+  tags = {
+    Name = "terraform-tg-kunjan" # Name of target Group
+  }
 }
