@@ -1,0 +1,17 @@
+resource "aws_lb" "test" {
+  name               = "kunjan-lb-node"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = ["sg-0ddeb3fa52ec1ac31"]
+  subnets            = ["subnet-09a50a0db3bdf9d87", "subnet-0c7ecd015c8189600"] # Public Subnets IDS for VPC
+
+  tags = {
+    Environment = "test"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "kunjan-tg-attchment" {
+  target_group_arn = "arn:aws:elasticloadbalancing:us-east-2:421320058418:targetgroup/kunjanWP-ASG-LB-TG/9b00e717398b20a9"
+  target_id        = "i-0c0ed875858a28c36"
+  port             = 80
+}
